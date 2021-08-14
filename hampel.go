@@ -143,7 +143,7 @@ func runningMedian(data []float64, windowSize int) []float64 {
 	if windowSize%2 == 0 {
 		ofs = 1
 	}
-	
+
 	for i, x := range data {
 		C.MediatorInsert(m, C.double(x))
 		if i+1 >= windowSize {
@@ -184,14 +184,17 @@ func runningSigma(data []float64, windowSize int) []float64 {
 		ofs = 1
 	}
 	
+	buf := make([]float64, windowSize)
 	m := C.MediatorNew(C.int(windowSize))
+
 	for i := 0; i < len(mads); i++ {
 		C.MediatorInsert(m, C.double(data[i]))
 		if i+1 >= windowSize {
 			m0 := float64(C.MediatorMedian(m))
-			mads[i-windowSize/2+ofs] = 1.4826 * medianAbsoluteDeviation(m0, data[i-windowSize+1:i+1])
+			mads[i-windowSize/2+ofs] = 1.4826 * medianAbsoluteDeviation(m0, buf, data[i-windowSize+1:i+1])
 		}
 	}
+	
 	C.free(unsafe.Pointer(m))
 
 	for i := 0; i < windowSize/2; i++ {
@@ -229,12 +232,11 @@ func abs(a float64) float64 {
 	return a
 }
 
-func medianAbsoluteDeviation(m float64, x []float64) float64 {
-	y := make([]float64, len(x))
-	for i := 0; i < len(y); i++ {
-		y[i] = abs(x[i] - m)
+func medianAbsoluteDeviation(m float64, buf []float64, x []float64) float64 {
+	for i := 0; i < len(buf); i++ {
+		buf[i] = abs(x[i] - m)
 	}
-	return median(y)
+	return median(buf)
 }
 
 func Filter(data []float64, windowSize, n int) []int {
