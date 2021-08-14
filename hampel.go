@@ -194,7 +194,7 @@ func runningSigma(data []float64, windowSize int) []float64 {
 			mads[i-windowSize/2+ofs] = 1.4826 * medianAbsoluteDeviation(m0, buf, data[i-windowSize+1:i+1])
 		}
 	}
-	
+
 	C.free(unsafe.Pointer(m))
 
 	for i := 0; i < windowSize/2; i++ {
@@ -239,6 +239,7 @@ func medianAbsoluteDeviation(m float64, buf []float64, x []float64) float64 {
 	return median(buf)
 }
 
+// Returns the outlier indices for a given data array, window size, and n.
 func Filter(data []float64, windowSize, n int) []int {
 	runningMedians := runningMedian(data, windowSize)
 	runningSigmas := runningSigma(data, windowSize)
@@ -253,6 +254,8 @@ func Filter(data []float64, windowSize, n int) []int {
 	return outliers
 }
 
+// Returns the transformed data with outliers set to the running median for
+// a given data array, window size, and n.
 func FilterImpute(data []float64, windowSize, n int) []float64 {
 	cleaned := make([]float64, len(data))
 	runningMedians := runningMedian(data, windowSize)
