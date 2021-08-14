@@ -143,6 +143,7 @@ func runningMedian(data []float64, windowSize int) []float64 {
 	if windowSize%2 == 0 {
 		ofs = 1
 	}
+	
 	for i, x := range data {
 		C.MediatorInsert(m, C.double(x))
 		if i+1 >= windowSize {
@@ -150,10 +151,12 @@ func runningMedian(data []float64, windowSize int) []float64 {
 		}
 	}
 	C.free(unsafe.Pointer(m))
+
 	var (
 		num  int
 		ofs0 int
 	)
+
 	if windowSize%2 == 0 {
 		num = windowSize / 2
 	} else {
@@ -162,9 +165,11 @@ func runningMedian(data []float64, windowSize int) []float64 {
 			ofs0 = -1
 		}
 	}
+
 	for i := 0; i < num+ofs0; i++ {
 		medians[i] = medians[num+ofs0]
 	}
+
 	for i := len(medians) - 1; i > len(medians)-num; i-- {
 		medians[i] = medians[len(medians)-num]
 	}
@@ -174,40 +179,39 @@ func runningMedian(data []float64, windowSize int) []float64 {
 
 func runningSigma(data []float64, windowSize int) []float64 {
 	mads := make([]float64, len(data))
-	startCenter := windowSize / 2
 	var ofs int
-	if windowSize%2 == 1 {
+	if windowSize%2 == 0 {
 		ofs = 1
 	}
-	for i := startCenter; i < len(mads); i++ {
-		if i+windowSize/2+ofs > len(mads) {
-			break
+	
+	m := C.MediatorNew(C.int(windowSize))
+	for i := 0; i < len(mads); i++ {
+		C.MediatorInsert(m, C.double(data[i]))
+		if i+1 >= windowSize {
+			m0 := float64(C.MediatorMedian(m))
+			mads[i-windowSize/2+ofs] = 1.4826 * medianAbsoluteDeviation(m0, data[i-windowSize+1:i+1])
 		}
-		mads[i] = 1.4826 * medianAbsoluteDeviation(data[i-windowSize/2:i+windowSize/2+ofs])
 	}
+	C.free(unsafe.Pointer(m))
+
 	for i := 0; i < windowSize/2; i++ {
 		mads[i] = mads[windowSize/2]
 	}
+
 	var num int
 	if windowSize%2 == 0 {
 		num = windowSize / 2
 	} else {
 		num = windowSize/2 + 1
 	}
+
 	for i := len(mads) - 1; i > len(mads)-num; i-- {
 		mads[i] = mads[len(mads)-num]
 	}
 	return mads
 }
 
-func median(x []float64, makeCopy bool) float64 {
-	var y []float64
-	if makeCopy {
-		y = make([]float64, len(x))
-		copy(y, x)
-	} else {
-		y = x
-	}
+func median(y []float64) float64 {
 	sort.Float64s(y)
 	var median float64
 	if len(y)%2 == 1 {
@@ -225,13 +229,12 @@ func abs(a float64) float64 {
 	return a
 }
 
-func medianAbsoluteDeviation(x []float64) float64 {
-	m := median(x, true)
+func medianAbsoluteDeviation(m float64, x []float64) float64 {
 	y := make([]float64, len(x))
 	for i := 0; i < len(y); i++ {
 		y[i] = abs(x[i] - m)
 	}
-	return median(y, false)
+	return median(y)
 }
 
 func Filter(data []float64, windowSize, n int) []int {
