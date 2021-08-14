@@ -6,3 +6,4 @@ The running median code is taken from https://stackoverflow.com/a/5971248/125145
 
 ## Docs
 
+https://pkg.go.dev/github.com/a1c9lll/go-hampel-filter
