@@ -200,9 +200,14 @@ func runningSigma(data []float64, windowSize int) []float64 {
 	return mads
 }
 
-func median(x []float64) float64 {
-	y := make([]float64, len(x))
-	copy(y, x)
+func median(x []float64, makeCopy bool) float64 {
+	var y []float64
+	if makeCopy {
+		y = make([]float64, len(x))
+		copy(y, x)
+	} else {
+		y = x
+	}
 	sort.Float64s(y)
 	var median float64
 	if len(y)%2 == 1 {
@@ -221,12 +226,12 @@ func abs(a float64) float64 {
 }
 
 func medianAbsoluteDeviation(x []float64) float64 {
-	m := median(x)
+	m := median(x, true)
 	y := make([]float64, len(x))
 	for i := 0; i < len(y); i++ {
 		y[i] = abs(x[i] - m)
 	}
-	return median(y)
+	return median(y, false)
 }
 
 func Filter(data []float64, windowSize, n int) []int {
