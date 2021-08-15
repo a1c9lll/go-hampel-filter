@@ -205,6 +205,13 @@ func abs(a float64) float64 {
 	return a
 }
 
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func medianAbsoluteDeviation(m float64, buf []float64, x []float64) float64 {
 	for i := 0; i < len(buf); i++ {
 		buf[i] = abs(x[i] - m)
@@ -214,6 +221,7 @@ func medianAbsoluteDeviation(m float64, buf []float64, x []float64) float64 {
 
 // Returns the outlier indices for a given data array, window size, and n.
 func Filter(data []float64, windowSize, n int) []int {
+	windowSize = min(len(data), windowSize)
 	runningMedians, runningSigmas := runningMedianAndSigma(data, windowSize)
 
 	outliers := []int{}
@@ -229,6 +237,7 @@ func Filter(data []float64, windowSize, n int) []int {
 // Returns the transformed data with outliers set to the running median for
 // a given data array, window size, and n.
 func FilterImpute(data []float64, windowSize, n int) []float64 {
+	windowSize = min(len(data), windowSize)
 	cleaned := make([]float64, len(data))
 	runningMedians, runningSigmas := runningMedianAndSigma(data, windowSize)
 
@@ -246,6 +255,7 @@ func FilterImpute(data []float64, windowSize, n int) []float64 {
 // Transforms the data with outliers set to the running median for
 // a given data array, window size, and n.
 func FilterImputeInPlace(data []float64, windowSize, n int) {
+	windowSize = min(len(data), windowSize)
 	runningMedians, runningSigmas := runningMedianAndSigma(data, windowSize)
 
 	for i := 0; i < len(data); i++ {
