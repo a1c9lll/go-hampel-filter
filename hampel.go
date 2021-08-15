@@ -137,58 +137,22 @@ import (
 
 const (
 	DefaultWindow = 10
-	DefaultN = 3
+	DefaultN      = 3
 )
 
-func runningMedian(data []float64, windowSize int) []float64 {
-	m := C.MediatorNew(C.int(windowSize))
+func runningMedianAndSigma(data []float64, windowSize int) ([]float64, []float64) {
 	medians := make([]float64, len(data))
-
-	var ofs int
-	if windowSize%2 == 0 {
-		ofs = 1
-	}
-
-	for i, x := range data {
-		C.MediatorInsert(m, C.double(x))
-		if i+1 >= windowSize {
-			medians[i+ofs-windowSize/2] = float64(C.MediatorMedian(m))
-		}
-	}
-	C.free(unsafe.Pointer(m))
+	mads := make([]float64, len(data))
 
 	var (
-		num  int
-		ofs0 int
+		ofs            int
+		halfWindowSize = windowSize / 2
 	)
 
 	if windowSize%2 == 0 {
-		num = windowSize / 2
-	} else {
-		num = windowSize/2 + 1
-		if len(medians)%2 == 1 {
-			ofs0 = -1
-		}
-	}
-
-	for i := 0; i < num+ofs0; i++ {
-		medians[i] = medians[num+ofs0]
-	}
-
-	for i := len(medians) - 1; i > len(medians)-num; i-- {
-		medians[i] = medians[len(medians)-num]
-	}
-
-	return medians
-}
-
-func runningSigma(data []float64, windowSize int) []float64 {
-	mads := make([]float64, len(data))
-	var ofs int
-	if windowSize%2 == 0 {
 		ofs = 1
 	}
-	
+
 	buf := make([]float64, windowSize)
 	m := C.MediatorNew(C.int(windowSize))
 
@@ -196,27 +160,31 @@ func runningSigma(data []float64, windowSize int) []float64 {
 		C.MediatorInsert(m, C.double(data[i]))
 		if i+1 >= windowSize {
 			m0 := float64(C.MediatorMedian(m))
-			mads[i-windowSize/2+ofs] = 1.4826 * medianAbsoluteDeviation(m0, buf, data[i-windowSize+1:i+1])
+			idx := i + ofs - halfWindowSize
+			medians[idx] = m0
+			mads[idx] = 1.4826 * medianAbsoluteDeviation(m0, buf, data[i-windowSize+1:i+1])
 		}
 	}
 
 	C.free(unsafe.Pointer(m))
 
-	for i := 0; i < windowSize/2; i++ {
-		mads[i] = mads[windowSize/2]
+	for i := 0; i < halfWindowSize; i++ {
+		medians[i] = medians[halfWindowSize]
+		mads[i] = mads[halfWindowSize]
 	}
 
 	var num int
 	if windowSize%2 == 0 {
-		num = windowSize / 2
+		num = halfWindowSize
 	} else {
-		num = windowSize/2 + 1
+		num = halfWindowSize + 1
 	}
 
 	for i := len(mads) - 1; i > len(mads)-num; i-- {
+		medians[i] = medians[len(mads)-num]
 		mads[i] = mads[len(mads)-num]
 	}
-	return mads
+	return medians, mads
 }
 
 func median(y []float64) float64 {
@@ -246,8 +214,7 @@ func medianAbsoluteDeviation(m float64, buf []float64, x []float64) float64 {
 
 // Returns the outlier indices for a given data array, window size, and n.
 func Filter(data []float64, windowSize, n int) []int {
-	runningMedians := runningMedian(data, windowSize)
-	runningSigmas := runningSigma(data, windowSize)
+	runningMedians, runningSigmas := runningMedianAndSigma(data, windowSize)
 
 	outliers := []int{}
 	for i := 0; i < len(data); i++ {
@@ -263,8 +230,7 @@ func Filter(data []float64, windowSize, n int) []int {
 // a given data array, window size, and n.
 func FilterImpute(data []float64, windowSize, n int) []float64 {
 	cleaned := make([]float64, len(data))
-	runningMedians := runningMedian(data, windowSize)
-	runningSigmas := runningSigma(data, windowSize)
+	runningMedians, runningSigmas := runningMedianAndSigma(data, windowSize)
 
 	for i := 0; i < len(data); i++ {
 		if data[i]-runningMedians[i] >= float64(n)*runningSigmas[i] {
@@ -280,8 +246,7 @@ func FilterImpute(data []float64, windowSize, n int) []float64 {
 // Transforms the data with outliers set to the running median for
 // a given data array, window size, and n.
 func FilterImputeInPlace(data []float64, windowSize, n int) {
-	runningMedians := runningMedian(data, windowSize)
-	runningSigmas := runningSigma(data, windowSize)
+	runningMedians, runningSigmas := runningMedianAndSigma(data, windowSize)
 
 	for i := 0; i < len(data); i++ {
 		if data[i]-runningMedians[i] >= float64(n)*runningSigmas[i] {
