@@ -323,11 +323,17 @@ func TestRunningSigma(t *testing.T) {
 
 func TestFilter(t *testing.T) {
 	data := []float64{1, 2, 1, 1, 40, 2, 1, 1, 30, 40, 1, 1, 2, 1}
-	outliers := Filter(data, 10, 3)
+	outliers := Filter(data, DefaultWindow, DefaultN)
 	require.Equal(t, []int{
 		4, 7, 8, 9,
 	}, outliers)
 
-	data = FilterImpute(data, 10, 3)
+	data = FilterImpute(data, DefaultWindow, DefaultN)
 	require.Equal(t, []float64{1.0, 2.0, 1.0, 1.0, 1.5, 2.0, 1.0, 1.0, 1.5, 1.5, 1.0, 1.0, 2.0, 1.0}, data)
+
+	data = []float64{1, 2, 1, 1, 40, 2, 1, 1, 30, 40, 1, 1, 2, 1, 1}
+	FilterImputeInPlace(data, DefaultWindow, DefaultN)
+	require.Equal(t, []float64{
+		1, 2, 1, 1, 1.5, 2, 1, 1, 1.5, 1.5, 1, 1, 1, 1, 1,
+	}, data)
 }

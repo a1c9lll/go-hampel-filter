@@ -135,6 +135,11 @@ import (
 	"unsafe"
 )
 
+const (
+	DefaultWindow = 10
+	DefaultN = 3
+)
+
 func runningMedian(data []float64, windowSize int) []float64 {
 	m := C.MediatorNew(C.int(windowSize))
 	medians := make([]float64, len(data))
@@ -270,4 +275,17 @@ func FilterImpute(data []float64, windowSize, n int) []float64 {
 	}
 
 	return cleaned
+}
+
+// Transforms the data with outliers set to the running median for
+// a given data array, window size, and n.
+func FilterImputeInPlace(data []float64, windowSize, n int) {
+	runningMedians := runningMedian(data, windowSize)
+	runningSigmas := runningSigma(data, windowSize)
+
+	for i := 0; i < len(data); i++ {
+		if data[i]-runningMedians[i] >= float64(n)*runningSigmas[i] {
+			data[i] = runningMedians[i]
+		}
+	}
 }
